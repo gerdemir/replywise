@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'https://replywise-1-yokb.onrender.com'
-};
+  apiBaseUrl: 'https://replywise-1-yokb.onrender.com/api'
+
