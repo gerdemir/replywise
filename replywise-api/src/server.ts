@@ -26,9 +26,13 @@ const PORT = process.env.PORT || 8080;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: /localhost/,
+  origin: [
+    'http://localhost:4200',
+    'https://replywise-topaz.vercel.app'
+  ],
   credentials: true
 }));
+
 app.use(express.json());
 
 // Routes
