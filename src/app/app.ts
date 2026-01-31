@@ -21,13 +21,12 @@ import { ReplywiseApiService } from './services/replywise-api.service';
 import { GenerateResponse, ReplyDraft } from './models/replywise.models';
 import { fadeIn, slideIn } from './app.animations';
 
-
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule, // ⭐ CRITICAL FIX (prevents white screen)
+    RouterModule, // ⭐ required for ActivatedRoute
 
     HeaderComponent,
     EmailInputComponent,
@@ -51,7 +50,7 @@ import { fadeIn, slideIn } from './app.animations';
 export class App implements OnInit {
 
   /////////////////////////////////////////////////
-  // State
+  // STATE
   /////////////////////////////////////////////////
 
   emailText = signal<string>('');
@@ -63,7 +62,7 @@ export class App implements OnInit {
   showAboutPage = signal<boolean>(false);
 
   /////////////////////////////////////////////////
-  // Computed
+  // COMPUTED
   /////////////////////////////////////////////////
 
   hasResults = computed(() => this.generateResponse() !== null);
@@ -75,7 +74,7 @@ export class App implements OnInit {
   });
 
   /////////////////////////////////////////////////
-  // Constructor
+  // CONSTRUCTOR
   /////////////////////////////////////////////////
 
   constructor(
@@ -85,7 +84,7 @@ export class App implements OnInit {
   ) {}
 
   /////////////////////////////////////////////////
-  // 🔥 AUTO-FILL EMAIL FROM URL (Gmail integration)
+  // AUTO-FILL EMAIL FROM GMAIL (?email=)
   /////////////////////////////////////////////////
 
   ngOnInit(): void {
@@ -99,7 +98,7 @@ export class App implements OnInit {
   }
 
   /////////////////////////////////////////////////
-  // Existing logic (UNCHANGED)
+  // UI HANDLERS (UNCHANGED LOGIC)
   /////////////////////////////////////////////////
 
   get demoMode(): boolean {
@@ -122,6 +121,10 @@ export class App implements OnInit {
     this.emailText.set(this.apiService.SAMPLE_EMAIL);
   }
 
+  /////////////////////////////////////////////////
+  // GENERATE
+  /////////////////////////////////////////////////
+
   onGenerate(): void {
     if (!this.emailText()) return;
 
@@ -135,12 +138,18 @@ export class App implements OnInit {
         this.generateResponse.set(response);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: () => {
         this.loading.set(false);
-        this.snackBar.open('Failed to connect to backend', 'Close', { duration: 5000 });
+        this.snackBar.open('Failed to connect to backend', 'Close', {
+          duration: 4000
+        });
       }
     });
   }
+
+  /////////////////////////////////////////////////
+  // DRAFT UPDATE
+  /////////////////////////////////////////////////
 
   onDraftUpdate(event: { index: number; draft: ReplyDraft }): void {
     const response = this.generateResponse();
@@ -159,7 +168,103 @@ export class App implements OnInit {
     this.selectedDraftIndex.set(index);
   }
 
+  /////////////////////////////////////////////////
+  // REWRITE
+  /////////////////////////////////////////////////
+
+  onRewriteRequest(event: { action: 'shorter' | 'more_formal' | 'regenerate'; draftIndex: number }): void {
+    const response = this.generateResponse();
+    if (!response) return;
+
+    const draft = response.reply_drafts[event.draftIndex];
+
+    this.loading.set(true);
+
+    this.apiService.rewrite({
+      action: event.action,
+      selectedDraftBody: draft.body,
+      originalEmail: this.emailText(),
+      context: this.context()
+    }).subscribe({
+      next: (rewriteResponse) => {
+        const updatedDrafts = [...response.reply_drafts];
+
+        updatedDrafts[event.draftIndex] = {
+          ...draft,
+          subject: rewriteResponse.subject,
+          body: rewriteResponse.body
+        };
+
+        this.generateResponse.set({
+          ...response,
+          reply_drafts: updatedDrafts
+        });
+
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+      }
+    });
+  }
+
+  /////////////////////////////////////////////////
+  // QUESTIONS
+  /////////////////////////////////////////////////
+
+  onQuestionsInserted(questions: string[]): void {
+    const response = this.generateResponse();
+    if (!response) return;
+
+    const draftIndex = this.selectedDraftIndex();
+    const draft = response.reply_drafts[draftIndex];
+
+    const questionsText =
+      '\n\nQuestions:\n' + questions.map(q => `- ${q}`).join('\n');
+
+    const updatedDrafts = [...response.reply_drafts];
+
+    updatedDrafts[draftIndex] = {
+      ...draft,
+      body: draft.body + questionsText
+    };
+
+    this.generateResponse.set({
+      ...response,
+      reply_drafts: updatedDrafts
+    });
+  }
+
+  /////////////////////////////////////////////////
+  // EMAIL + COPY (required by template)
+  /////////////////////////////////////////////////
+
   onToEmailChange(email: string): void {
     this.toEmail.set(email);
+  }
+
+  onCopy(): void {
+    const draft = this.currentDraft();
+    if (!draft) return;
+
+    navigator.clipboard.writeText(draft.body);
+    this.snackBar.open('Copied!', 'OK', { duration: 1500 });
+  }
+
+  /////////////////////////////////////////////////
+  // APPROVAL ACTIONS
+  /////////////////////////////////////////////////
+
+  onApprove(): void {}
+
+  onEdit(): void {
+    this.selectedDraftIndex.set(0);
+  }
+
+  onReject(): void {
+    this.generateResponse.set(null);
+    this.emailText.set('');
+    this.context.set('');
+    this.selectedDraftIndex.set(0);
   }
 }
