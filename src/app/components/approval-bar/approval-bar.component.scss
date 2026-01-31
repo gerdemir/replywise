@@ -1,0 +1,79 @@
+.approval-bar-container {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.approval-bar {
+  max-width: 1400px;
+  margin: 0 auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.approval-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.approval-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  
+  mat-icon {
+    color: #3b82f6;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.approval-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.to-field {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.approve-btn,
+.copy-btn {
+  min-width: 180px;
+  height: 48px;
+  
+  mat-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .approval-bar-container {
+    padding: 0.75rem;
+  }
+  
+  .approval-actions {
+    flex-direction: column;
+    
+    .to-field {
+      width: 100%;
+      max-width: none;
+    }
+    
+    button {
+      width: 100%;
+    }
+  }
+}

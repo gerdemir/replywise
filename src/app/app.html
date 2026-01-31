@@ -1,0 +1,91 @@
+<div class="app-container">
+  <app-header
+    [demoMode]="demoMode"
+    (demoModeChange)="onDemoModeChange($event)">
+  </app-header>
+
+  <main class="main-content">
+    <div class="content-wrapper">
+      <app-email-input
+        [emailText]="emailText()"
+        [context]="context()"
+        [loading]="loading()"
+        [demoMode]="demoMode"
+        [sampleEmail]="apiService.SAMPLE_EMAIL"
+        (emailTextChange)="onEmailTextChange($event)"
+        (contextChange)="onContextChange($event)"
+        (generateClick)="onGenerate()"
+        (loadSampleClick)="onLoadSample()">
+      </app-email-input>
+
+      @if (loading() && !hasResults()) {
+        <mat-card class="loading-card" @fadeIn>
+          <mat-card-content>
+            <div class="skeleton-loader">
+              <div class="skeleton-line skeleton-title"></div>
+              <div class="skeleton-line skeleton-text"></div>
+              <div class="skeleton-line skeleton-text"></div>
+              <div class="skeleton-line skeleton-text-short"></div>
+            </div>
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      @if (hasResults()) {
+        <div class="results-grid" @fadeIn>
+          <div class="results-left">
+            <app-intent-summary-card
+              [intentSummary]="generateResponse()!.intent_summary">
+            </app-intent-summary-card>
+
+            <app-risk-panel
+              [risk]="generateResponse()!.risk">
+            </app-risk-panel>
+          </div>
+
+          <div class="results-right">
+            <app-reply-drafts
+              [replyDrafts]="generateResponse()!.reply_drafts"
+              [originalEmail]="emailText()"
+              [context]="context()"
+              [loading]="loading()"
+              (rewriteRequest)="onRewriteRequest($event)"
+              (draftUpdate)="onDraftUpdate($event)"
+              (selectedTabChange)="onTabChange($event)">
+            </app-reply-drafts>
+
+            <app-voice-panel
+              [draftText]="currentDraft()?.body || ''"
+              (approve)="onApprove()"
+              (edit)="onEdit()"
+              (reject)="onReject()">
+            </app-voice-panel>
+
+            <app-questions-card
+              [questions]="generateResponse()!.questions_to_ask"
+              [selectedDraftBody]="currentDraft()?.body || ''"
+              (questionsInserted)="onQuestionsInserted($event)">
+            </app-questions-card>
+          </div>
+        </div>
+
+        <app-approval-bar
+          [subject]="currentDraft()?.subject || ''"
+          [body]="currentDraft()?.body || ''"
+          [toEmail]="toEmail()"
+          (toEmailChange)="onToEmailChange($event)"
+          (approveClick)="onApprove()"
+          (copyClick)="onCopy()">
+        </app-approval-bar>
+      }
+    </div>
+  </main>
+
+  <app-footer (showAbout)="showAboutPage.set(true)"></app-footer>
+  
+  <app-about-page 
+    [visible]="showAboutPage()"
+    (close)="showAboutPage.set(false)">
+  </app-about-page>
+</div>

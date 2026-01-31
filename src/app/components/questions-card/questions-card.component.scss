@@ -1,0 +1,61 @@
+.questions-card {
+  margin-bottom: 2rem;
+}
+
+mat-card-header {
+  margin-bottom: 1rem;
+  
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    color: #667eea;
+    
+    mat-icon {
+      color: #10b981;
+    }
+  }
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.question-item {
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #f3f4f6;
+  }
+}
+
+.question-text {
+  color: #374151;
+  line-height: 1.5;
+}
+
+mat-card-actions {
+  padding: 1rem;
+  
+  button {
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+::ng-deep {
+  .mat-mdc-checkbox {
+    width: 100%;
+    
+    .mdc-form-field {
+      width: 100%;
+    }
+  }
+}

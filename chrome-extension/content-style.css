@@ -1,0 +1,32 @@
+#replywise-compose-btn:active {
+  transform: scale(0.98);
+}
+
+#replywise-compose-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Highlight detected email risks */
+.replywise-risk-highlight {
+  background-color: #fff3cd;
+  border-left: 3px solid #ffc107;
+  padding: 8px;
+  margin: 8px 0;
+  border-radius: 4px;
+}
+
+.replywise-risk-highlight.high {
+  background-color: #f8d7da;
+  border-left-color: #dc3545;
+}
+
+.replywise-popup-overlay {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}

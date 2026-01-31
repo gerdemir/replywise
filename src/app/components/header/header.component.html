@@ -1,0 +1,46 @@
+<header class="header">
+  <div class="header-content">
+    <div class="brand">
+      <h1 class="app-name">ReplyWise</h1>
+      <p class="tagline">Approve-to-Reply AI Email Assistant</p>
+    </div>
+    
+    <div class="header-right">
+      <div class="step-indicator" aria-label="Progress steps">
+        <span class="step">1 Paste</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="step">2 Review</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="step">3 Approve</span>
+      </div>
+      
+      <div class="badge" aria-label="Responsible AI badge">
+        <mat-icon>verified</mat-icon>
+        <span>Responsible AI</span>
+      </div>
+      
+      <div class="api-status" [class]="'status-' + apiStatus()" [matTooltip]="getStatusText()" matTooltipPosition="below">
+        <div class="status-badge">
+          <mat-icon [class.spinning]="apiStatus() === 'checking'">{{ getStatusIcon() }}</mat-icon>
+        </div>
+      </div>
+      
+      <div class="demo-toggle">
+        <mat-slide-toggle
+          [checked]="demoMode()"
+          (change)="demoModeChange.emit($event.checked)"
+          aria-label="Demo Mode toggle"
+          color="primary">
+          <span class="toggle-label">Demo Mode</span>
+        </mat-slide-toggle>
+        <mat-icon
+          matTooltip="Enable demo mode to use sample data and mock API responses"
+          matTooltipPosition="below"
+          class="info-icon"
+          aria-label="Demo mode information">
+          info
+        </mat-icon>
+      </div>
+    </div>
+  </div>
+</header>

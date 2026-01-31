@@ -1,0 +1,51 @@
+<mat-card class="risk-card" @slideIn>
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>warning</mat-icon>
+      Before you reply
+    </mat-card-title>
+  </mat-card-header>
+  
+  <mat-card-content>
+    @if (riskFlags().length > 0) {
+      <div class="risk-flags">
+        <h3 class="section-title">Risk Flags</h3>
+        <div class="chips-container">
+          @for (flag of riskFlags(); track flag.label) {
+            <mat-chip [color]="'warn'">
+              <mat-icon>{{ flag.icon }}</mat-icon>
+              {{ flag.label }}
+            </mat-chip>
+          }
+        </div>
+      </div>
+    }
+
+    @if (risk().notes.length > 0) {
+      <div class="risk-notes">
+        <h3 class="section-title">Notes</h3>
+        <ul class="notes-list">
+          @for (note of risk().notes; track $index) {
+            <li>{{ note }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="confidence-section">
+      <div class="confidence-header">
+        <h3 class="section-title">Confidence</h3>
+        <span class="confidence-label" [class]="'level-' + confidenceLevel().toLowerCase()">
+          {{ confidenceLevel() }}
+        </span>
+      </div>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="risk().confidence"
+        [color]="confidenceColor()"
+        class="confidence-bar">
+      </mat-progress-bar>
+      <span class="confidence-value">{{ risk().confidence }}%</span>
+    </div>
+  </mat-card-content>
+</mat-card>

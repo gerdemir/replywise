@@ -1,0 +1,18 @@
+<mat-card class="intent-card" @slideIn>
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>lightbulb</mat-icon>
+      What the sender wants
+    </mat-card-title>
+  </mat-card-header>
+  
+  <mat-card-content>
+    <ul class="intent-list" aria-label="Intent summary list">
+      @for (item of intentSummary(); track $index) {
+        <li class="intent-item">
+          {{ item }}
+        </li>
+      }
+    </ul>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,66 @@
+<mat-card class="email-input-card" @fadeIn>
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>email</mat-icon>
+      Email Input
+    </mat-card-title>
+  </mat-card-header>
+  
+  <mat-card-content>
+    <div class="input-section">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Paste email here</mat-label>
+        <textarea
+          matInput
+          [value]="emailText()"
+          (input)="onEmailTextChange($any($event.target).value)"
+          rows="8"
+          placeholder="Paste the email you received..."
+          [disabled]="loading()"
+          aria-label="Email text input">
+        </textarea>
+      </mat-form-field>
+
+      @if (demoMode() && sampleEmail()) {
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="onLoadSample()"
+          [disabled]="loading()"
+          class="load-sample-btn"
+          aria-label="Load sample email">
+          <mat-icon>auto_awesome</mat-icon>
+          Load Sample Email
+        </button>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Context (optional)</mat-label>
+        <input
+          matInput
+          [value]="context()"
+          (input)="onContextChange($any($event.target).value)"
+          placeholder="e.g., 'reply short, say yes but ask for time'"
+          [disabled]="loading()"
+          aria-label="Context input">
+        <mat-hint>Provide additional context or instructions for the reply</mat-hint>
+      </mat-form-field>
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onGenerate()"
+      [disabled]="!emailText() || loading()"
+      class="generate-btn"
+      aria-label="Generate reply">
+      <mat-icon>auto_awesome</mat-icon>
+      Generate Reply
+    </button>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
+    }
+  </mat-card-actions>
+</mat-card>

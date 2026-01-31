@@ -1,0 +1,116 @@
+.risk-card {
+  height: 100%;
+}
+
+mat-card-header {
+  margin-bottom: 1rem;
+  
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    color: #ef4444;
+    
+    mat-icon {
+      color: #f59e0b;
+    }
+  }
+}
+
+.section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.75rem 0;
+}
+
+.risk-flags {
+  margin-bottom: 1.5rem;
+}
+
+.chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  
+  mat-chip {
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.risk-notes {
+  margin-bottom: 1.5rem;
+}
+
+.notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  
+  li {
+    padding: 0.5rem 0;
+    padding-left: 1.25rem;
+    position: relative;
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    
+    &::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: #9ca3af;
+    }
+  }
+}
+
+.confidence-section {
+  margin-top: 1.5rem;
+}
+
+.confidence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.confidence-label {
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  
+  &.level-high {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  
+  &.level-med {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  
+  &.level-low {
+    background: #dbeafe;
+    color: #2563eb;
+  }
+}
+
+.confidence-bar {
+  height: 8px;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.confidence-value {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}

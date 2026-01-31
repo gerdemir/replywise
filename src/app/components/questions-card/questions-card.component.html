@@ -1,0 +1,35 @@
+<mat-card class="questions-card" @slideIn>
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>help_outline</mat-icon>
+      Questions to ask back
+    </mat-card-title>
+  </mat-card-header>
+  
+  <mat-card-content>
+    <div class="questions-list">
+      @for (question of questions(); track $index) {
+        <div class="question-item">
+          <mat-checkbox
+            [checked]="isSelected($index)"
+            (change)="toggleQuestion($index)"
+            [aria-label]="'Select question: ' + question">
+            <span class="question-text">{{ question }}</span>
+          </mat-checkbox>
+        </div>
+      }
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="insertSelected()"
+      [disabled]="selectedQuestions().size === 0"
+      aria-label="Insert selected questions into draft">
+      <mat-icon>add</mat-icon>
+      Insert selected into draft
+    </button>
+  </mat-card-actions>
+</mat-card>

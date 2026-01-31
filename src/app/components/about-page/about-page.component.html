@@ -1,0 +1,116 @@
+@if (visible()) {
+  <div class="about-overlay" (click)="onClose()" @fadeIn>
+    <div class="about-container" (click)="$event.stopPropagation()" @slideIn>
+      <div class="about-header">
+        <h2 class="about-title">About ReplyWise</h2>
+        <button mat-icon-button (click)="onClose()" aria-label="Close" class="close-btn">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="about-content">
+        <mat-card class="about-card">
+          <mat-card-content>
+            <h3 class="section-title">Our Mission</h3>
+            <p class="description">
+              ReplyWise is an AI-powered email reply assistant that helps you craft perfect email responses. 
+              Built with cutting-edge technology to analyze emails, detect risks, and generate professional replies 
+              tailored to your needs.
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="team-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>people</mat-icon>
+              Development Team
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="team-grid">
+              @for (member of teamMembers; track member.name) {
+                <div class="team-member">
+                  <div class="member-avatar">
+                    <img 
+                      [src]="member.profilePic" 
+                      [alt]="member.name + ' profile picture'"
+                      class="profile-pic"
+                      (error)="onImageError($event)">
+                  </div>
+                  <div class="member-info">
+                    <h4 class="member-name">{{ member.name }}</h4>
+                    <p class="member-role">{{ member.role }}</p>
+                  </div>
+                  <a 
+                    [href]="member.linkedin" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    mat-raised-button
+                    color="primary"
+                    class="linkedin-btn">
+                    <mat-icon>link</mat-icon>
+                    LinkedIn
+                  </a>
+                </div>
+                @if (!$last) {
+                  <mat-divider></mat-divider>
+                }
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="contact-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>contact_mail</mat-icon>
+              Contact Us
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p class="contact-text">Have questions or feedback? Reach out to our team members:</p>
+            <div class="contact-links">
+              @for (member of teamMembers; track member.name) {
+                <a 
+                  [href]="member.linkedin" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  mat-stroked-button
+                  class="contact-link">
+                  <mat-icon>person</mat-icon>
+                  {{ member.name }}
+                </a>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="tech-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>code</mat-icon>
+              Technology Stack
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="tech-list">
+              <div class="tech-item">
+                <strong>Frontend:</strong> Angular 21, Angular Material, TypeScript
+              </div>
+              <div class="tech-item">
+                <strong>Backend:</strong> Node.js, Express, TypeScript
+              </div>
+              <div class="tech-item">
+                <strong>AI:</strong> Google Gemini 2.5 Flash
+              </div>
+              <div class="tech-item">
+                <strong>Tools:</strong> Zod, Helmet, CORS
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+}

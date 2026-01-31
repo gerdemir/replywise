@@ -1,0 +1,91 @@
+<mat-card class="reply-drafts-card" @slideIn>
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>edit</mat-icon>
+      Suggested replies
+    </mat-card-title>
+  </mat-card-header>
+  
+  <mat-card-content>
+    <mat-tab-group
+      [(selectedIndex)]="selectedTabIndex"
+      (selectedIndexChange)="onTabChange($event)"
+      animationDuration="300ms"
+      aria-label="Reply style tabs">
+      
+      @for (draft of editedDrafts(); track $index) {
+        <mat-tab [label]="draft.style.charAt(0).toUpperCase() + draft.style.slice(1)">
+          <div class="tab-content">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Subject</mat-label>
+              <input
+                matInput
+                [value]="draft.subject"
+                (input)="onDraftChange($index, 'subject', $any($event.target).value)"
+                aria-label="Email subject">
+              <button
+                mat-icon-button
+                matSuffix
+                (click)="onCopy($index, 'subject')"
+                aria-label="Copy subject">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Body</mat-label>
+              <textarea
+                matInput
+                [value]="draft.body"
+                (input)="onDraftChange($index, 'body', $any($event.target).value)"
+                rows="10"
+                aria-label="Email body">
+              </textarea>
+              <button
+                mat-icon-button
+                matSuffix
+                (click)="onCopy($index, 'body')"
+                aria-label="Copy body">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <div class="action-buttons">
+              <button
+                mat-stroked-button
+                (click)="onCopyFull($index)"
+                aria-label="Copy full draft">
+                <mat-icon>content_copy</mat-icon>
+                Copy
+              </button>
+              <button
+                mat-stroked-button
+                (click)="onRewrite('shorter', $index)"
+                [disabled]="loading()"
+                aria-label="Make shorter">
+                <mat-icon>compress</mat-icon>
+                Make shorter
+              </button>
+              <button
+                mat-stroked-button
+                (click)="onRewrite('more_formal', $index)"
+                [disabled]="loading()"
+                aria-label="Make more formal">
+                <mat-icon>business</mat-icon>
+                More formal
+              </button>
+              <button
+                mat-stroked-button
+                (click)="onRewrite('regenerate', $index)"
+                [disabled]="loading()"
+                aria-label="Regenerate">
+                <mat-icon>refresh</mat-icon>
+                Regenerate
+              </button>
+            </div>
+          </div>
+        </mat-tab>
+      }
+    </mat-tab-group>
+  </mat-card-content>
+</mat-card>

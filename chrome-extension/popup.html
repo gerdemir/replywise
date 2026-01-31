@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReplyWise</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="header">
+      <h1>✨ ReplyWise</h1>
+      <p class="subtitle">AI-Powered Email Replies</p>
+    </div>
+
+    <div id="form-section" class="section active">
+      <div class="form-group">
+        <label for="emailText">Email Text</label>
+        <textarea id="emailText" placeholder="Paste the email you received..." rows="4"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="context">Context (Optional)</label>
+        <textarea id="context" placeholder="Add any context about your relationship or previous conversations..." rows="2"></textarea>
+      </div>
+
+      <div class="tone-selector">
+        <label>Reply Tone</label>
+        <div class="tone-options">
+          <button class="tone-btn active" data-tone="professional">Professional</button>
+          <button class="tone-btn" data-tone="casual">Casual</button>
+          <button class="tone-btn" data-tone="friendly">Friendly</button>
+          <button class="tone-btn" data-tone="formal">Formal</button>
+        </div>
+      </div>
+
+      <button id="generateBtn" class="generate-btn">Generate Reply</button>
+    </div>
+
+    <div id="loading-section" class="section hidden">
+      <div class="spinner"></div>
+      <p>Crafting your perfect reply...</p>
+    </div>
+
+    <div id="result-section" class="section hidden">
+      <div class="result-header">
+        <h3>Your AI Reply</h3>
+        <span id="riskBadge" class="risk-badge"></span>
+      </div>
+
+      <div id="intentSummary" class="intent-summary">
+        <h4>📋 Email Intent</h4>
+        <ul id="intentList"></ul>
+      </div>
+
+      <div id="mainReply" class="reply-box"></div>
+
+      <div id="alternativeReplies" class="alternatives">
+        <h4>Alternative Options</h4>
+        <div id="alternativesList"></div>
+      </div>
+
+      <div id="questionsSection" class="questions-section">
+        <h4>❓ Questions You Might Want to Ask</h4>
+        <ul id="questionsList"></ul>
+      </div>
+
+      <div class="risk-analysis">
+        <h4>🚨 Risk Analysis</h4>
+        <div id="riskFlags"></div>
+        <p id="riskNotes" class="risk-notes"></p>
+      </div>
+
+      <div class="action-buttons">
+        <button id="copyBtn" class="action-btn copy-btn">📋 Copy</button>
+        <button id="shareBtn" class="action-btn share-btn">👥 Share for Review</button>
+        <button id="editBtn" class="action-btn edit-btn">✏️ Edit</button>
+        <button id="backBtn" class="action-btn back-btn">← Back</button>
+      </div>
+    </div>
+
+    <div id="share-section" class="section hidden">
+      <h3>Share for Review</h3>
+      <input id="shareEmail" type="email" placeholder="Enter team member email">
+      <textarea id="shareMessage" placeholder="Add a note..." rows="2"></textarea>
+      <button id="sendShareBtn" class="generate-btn">Send for Review</button>
+      <button id="backFromShareBtn" class="generate-btn secondary">Cancel</button>
+    </div>
+
+    <div id="edit-section" class="section hidden">
+      <h3>Edit Reply</h3>
+      <textarea id="editText" rows="6"></textarea>
+      <button id="saveEditBtn" class="generate-btn">Save Changes</button>
+      <button id="backFromEditBtn" class="generate-btn secondary">Cancel</button>
+    </div>
+
+    <div id="error-section" class="section hidden error-box">
+      <p id="errorMessage"></p>
+      <button id="closeErrorBtn" class="generate-btn">Try Again</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

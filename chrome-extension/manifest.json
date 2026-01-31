@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "ReplyWise",
+  "version": "1.0.0",
+  "description": "AI-powered email reply assistant with tone matching and collaborative drafts",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage",
+    "tabs",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "http://localhost:8080/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_popup": "extension-popup.html",
+    "default_title": "ReplyWise - AI Email Assistant"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content-script.js"],
+      "css": ["content-style.css"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src http://localhost:8080 http://localhost:* https://*.googleapis.com 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["*.js", "*.css", "*.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

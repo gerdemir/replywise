@@ -1,0 +1,43 @@
+<div class="approval-bar-container" @slideUp>
+  <mat-card class="approval-bar">
+    <mat-card-content>
+      <div class="approval-content">
+        <div class="approval-message">
+          <mat-icon>info</mat-icon>
+          <span>AI generated this draft. Review before sending.</span>
+        </div>
+        
+        <div class="approval-actions">
+          <mat-form-field appearance="outline" class="to-field">
+            <mat-label>To:</mat-label>
+            <input
+              matInput
+              [value]="toEmail()"
+              (input)="onToEmailChange($any($event.target).value)"
+              placeholder="Optional recipient email"
+              aria-label="Recipient email">
+          </mat-form-field>
+          
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="onApprove()"
+            class="approve-btn"
+            aria-label="Approve and open Gmail">
+            <mat-icon>mail</mat-icon>
+            Approve & Open Gmail
+          </button>
+          
+          <button
+            mat-stroked-button
+            (click)="onCopy()"
+            class="copy-btn"
+            aria-label="Copy final draft">
+            <mat-icon>content_copy</mat-icon>
+            Copy final
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

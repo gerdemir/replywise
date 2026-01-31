@@ -1,0 +1,87 @@
+<mat-card class="voice-panel">
+  <mat-card-header>
+    <mat-card-title class="panel-title">
+      <mat-icon>mic</mat-icon>
+      Voice Commands
+    </mat-card-title>
+    <mat-card-subtitle class="powered-by">
+      Powered by ElevenLabs
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content class="panel-content">
+    <!-- Audio Playback Section -->
+    <div class="audio-section">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="onListen()"
+        [disabled]="isLoadingAudio()"
+        class="audio-button">
+        <mat-icon *ngIf="!isLoadingAudio() && !isPlaying()">
+          {{ isPlaying() ? 'stop' : 'play_arrow' }}
+        </mat-icon>
+        <mat-spinner *ngIf="isLoadingAudio()" diameter="20" class="spinner"></mat-spinner>
+        {{ isPlaying() ? 'Stop Audio' : 'Listen to Reply' }}
+      </button>
+    </div>
+
+    <!-- Voice Commands Section -->
+    <div class="voice-commands-section">
+      <h4 class="section-title">Voice Commands</h4>
+      <p class="instructions">
+        Click "Speak Command" and say one of the following:
+      </p>
+      <ul class="command-list">
+        <li><strong>"Approve"</strong> or <strong>"Send it"</strong> - Approve and send the reply</li>
+        <li><strong>"Edit"</strong> or <strong>"Change it"</strong> - Edit the reply</li>
+        <li><strong>"Reject"</strong> or <strong>"Don't send"</strong> - Reject the reply</li>
+      </ul>
+
+      <button
+        mat-stroked-button
+        (click)="onSpeakCommand()"
+        [disabled]="isLoadingAudio() || !voiceService.isSupported"
+        class="voice-command-button"
+        [class.listening]="isListening()">
+        <mat-icon>{{ isListening() ? 'mic' : 'mic_none' }}</mat-icon>
+        {{ isListening() ? 'Listening...' : 'Speak Command' }}
+      </button>
+    </div>
+
+    <!-- Manual Action Buttons -->
+    <div class="manual-actions-section">
+      <h4 class="section-title">Manual Actions</h4>
+      <div class="action-buttons">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="onApprove()"
+          class="action-button approve">
+          <mat-icon>check</mat-icon>
+          Approve & Send
+        </button>
+        <button
+          mat-stroked-button
+          (click)="onEdit()"
+          class="action-button edit">
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+        <button
+          mat-stroked-button
+          (click)="onReject()"
+          class="action-button reject">
+          <mat-icon>close</mat-icon>
+          Reject
+        </button>
+      </div>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage()" class="error-message">
+      <mat-icon color="warn">error</mat-icon>
+      {{ errorMessage() }}
+    </div>
+  </mat-card-content>
+</mat-card>
