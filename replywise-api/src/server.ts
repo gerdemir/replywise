@@ -132,10 +132,23 @@ app.post('/api/generate', async (req: Request, res: Response) => {
     const drafts = geminiData.reply_drafts || {};
 
     const transformedDrafts = [
-      { style: 'short', subject: drafts.short?.subject || 'Re: Email', body: drafts.short?.body || '' },
-      { style: 'friendly', subject: drafts.friendly?.subject || 'Re: Email', body: drafts.friendly?.body || '' },
-      { style: 'formal', subject: drafts.formal?.subject || 'Re: Email', body: drafts.formal?.body || '' },
-    ];
+  {
+    style: 'short' as const,
+    subject: drafts.short?.subject || 'Re: Email',
+    body: drafts.short?.body || '',
+  },
+  {
+    style: 'friendly' as const,
+    subject: drafts.friendly?.subject || 'Re: Email',
+    body: drafts.friendly?.body || '',
+  },
+  {
+    style: 'formal' as const,
+    subject: drafts.formal?.subject || 'Re: Email',
+    body: drafts.formal?.body || '',
+  },
+];
+
 
     const response: GenerateResponse = {
       intent_summary: geminiData.intent_summary || [],
