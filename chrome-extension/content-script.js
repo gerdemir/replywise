@@ -1,84 +1,95 @@
-// Content script for Gmail integration
-// This runs on mail.google.com pages
+// ReplyWise Gmail Content Script
 
-// Inject a button in Gmail compose area
+console.log("ReplyWise content script loaded");
+
+/////////////////////////////////////////////
+// Inject ReplyWise button into compose UI
+/////////////////////////////////////////////
+
 function injectReplyWiseButton() {
-  // Wait for Gmail to load
   const observer = new MutationObserver(() => {
-    // Look for compose area
-    const composeArea = document.querySelector('[role="region"]');
-    
-    if (composeArea && !document.getElementById('replywise-compose-btn')) {
-      // Find the compose button area and add ReplyWise button
-      const toolbar = document.querySelector('[role="toolbar"]');
-      
-      if (toolbar) {
-        const btn = document.createElement('button');
-        btn.id = 'replywise-compose-btn';
-        btn.innerHTML = '✨ ReplyWise';
-        btn.style.cssText = `
-          padding: 10px 16px;
-          margin-left: 8px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 13px;
-          transition: transform 0.2s;
-        `;
-        
-        btn.addEventListener('mouseover', () => {
-          btn.style.transform = 'scale(1.05)';
-        });
-        
-        btn.addEventListener('mouseout', () => {
-          btn.style.transform = 'scale(1)';
-        });
-        
-        btn.addEventListener('click', () => {
-          extractEmailAndOpenReplyWise();
-        });
-        
-        toolbar.appendChild(btn);
-      }
-    }
+    // Gmail compose window
+    const composeToolbars = document.querySelectorAll('[role="toolbar"]');
+
+    composeToolbars.forEach(toolbar => {
+      if (toolbar.querySelector('#replywise-compose-btn')) return;
+
+      const btn = document.createElement('button');
+      btn.id = 'replywise-compose-btn';
+      btn.textContent = '✨ ReplyWise';
+
+      btn.style.cssText = `
+        margin-left:8px;
+        padding:6px 12px;
+        background:linear-gradient(135deg,#667eea,#764ba2);
+        color:white;
+        border:none;
+        border-radius:4px;
+        cursor:pointer;
+        font-weight:600;
+        font-size:12px;
+      `;
+
+      btn.addEventListener('click', extractEmailAndOpenReplyWise);
+
+      toolbar.appendChild(btn);
+    });
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 }
 
-// Extract the email being replied to
+/////////////////////////////////////////////
+// Extract email content safely
+/////////////////////////////////////////////
+
 function extractEmailAndOpenReplyWise() {
-  // Get the email content
-  const emailBody = document.querySelector('[role="presentation"]');
-  
-  if (emailBody) {
-    const emailText = emailBody.innerText || emailBody.textContent;
-    
-    // Send to popup
-    chrome.storage.local.set({ selectedEmail: emailText }, () => {
-      chrome.action.openPopup();
-    });
-  } else {
-    alert('Could not extract email content. Please try again.');
+  // Gmail message bodies usually have this class
+  const messageBodies = document.querySelectorAll('.a3s');
+
+  if (!messageBodies.length) {
+    alert('ReplyWise: Email content not found.');
+    return;
   }
+
+  // Usually last message is the active one
+  const lastMessage = messageBodies[messageBodies.length - 1];
+
+  const emailText =
+    lastMessage.innerText ||
+    lastMessage.textContent ||
+    '';
+
+  if (!emailText.trim()) {
+    alert('ReplyWise: Email content empty.');
+    return;
+  }
+
+  chrome.storage.local.set({ selectedEmail: emailText }, () => {
+    chrome.action.openPopup();
+  });
 }
 
-// Add context menu option
+/////////////////////////////////////////////
+// Messaging API
+/////////////////////////////////////////////
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_EMAIL_CONTENT') {
-    const emailBody = document.querySelector('[role="presentation"]');
-    const emailText = emailBody?.innerText || '';
-    sendResponse({ emailText });
+    const messageBodies = document.querySelectorAll('.a3s');
+    const lastMessage = messageBodies[messageBodies.length - 1];
+
+    sendResponse({
+      emailText: lastMessage?.innerText || '',
+    });
   }
 });
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-  injectReplyWiseButton();
-});
+/////////////////////////////////////////////
+// Init
+/////////////////////////////////////////////
 
-// Also try to inject immediately
 injectReplyWiseButton();
