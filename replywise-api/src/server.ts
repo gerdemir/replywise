@@ -2,9 +2,11 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+
 import { initializeGemini, callGemini } from './gemini';
 import { generatePrompt, rewritePrompt } from './prompts';
 import { analyzeRisk } from './risk';
+
 import {
   GenerateRequestSchema,
   RewriteRequestSchema,
@@ -15,128 +17,126 @@ import {
   GenerateResponse,
   RewriteResponse
 } from './schemas';
+
 import ttsRouter from './routes/tts';
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Middleware
-app.use(helmet());
-app.use(cors({
-  origin: [
-    'http://localhost:4200',
-    'https://replywise-topaz.vercel.app'
-  ],
-  credentials: true
-}));
+//////////////////////////////////////////////////
+// ✅ Middleware order FIXED
+//////////////////////////////////////////////////
 
+// CORS FIRST
+app.use(
+  cors({
+    origin: true, // allow all origins safely for now
+    credentials: true,
+  })
+);
+
+// JSON parsing
 app.use(express.json());
 
+// Helmet AFTER CORS
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // avoid CSP blocking frontend
+  })
+);
+
+//////////////////////////////////////////////////
 // Routes
+//////////////////////////////////////////////////
+
 app.use('/api', ttsRouter);
 
-// Initialize Gemini
+//////////////////////////////////////////////////
+// Health check
+//////////////////////////////////////////////////
+
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+//////////////////////////////////////////////////
+// Gemini initialization
+//////////////////////////////////////////////////
+
 const geminiApiKey = process.env.GEMINI_API_KEY;
+
 if (!geminiApiKey || geminiApiKey === 'YOUR_KEY_HERE') {
-  console.warn('⚠️  WARNING: GEMINI_API_KEY not set or using placeholder. API will fail.');
+  console.warn('⚠️ GEMINI_API_KEY missing.');
 } else {
   initializeGemini(geminiApiKey);
   console.log('✅ Gemini initialized');
 }
 
-// Initialize ElevenLabs
+//////////////////////////////////////////////////
+// ElevenLabs initialization
+//////////////////////////////////////////////////
+
 const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
+
 if (!elevenLabsApiKey || elevenLabsApiKey === 'YOUR_KEY_HERE') {
-  console.warn('⚠️  WARNING: ELEVENLABS_API_KEY not set or using placeholder. TTS will fail.');
+  console.warn('⚠️ ELEVENLABS_API_KEY missing.');
 } else {
   console.log('✅ ElevenLabs initialized');
 }
 
-// Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message
-  });
-});
+//////////////////////////////////////////////////
+// Generate endpoint
+//////////////////////////////////////////////////
 
-// Health check
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// POST /api/generate
 app.post('/api/generate', async (req: Request, res: Response) => {
   try {
-    // Validate request
     const validatedData = GenerateRequestSchema.parse(req.body);
     const { emailText, context } = validatedData as GenerateRequest;
 
-    // Analyze risk using heuristics
     const heuristicRisk = analyzeRisk(emailText);
 
-    // Call Gemini
     const prompt = generatePrompt(emailText, context);
     const geminiResponse = await callGemini(prompt);
-    
-    // Parse Gemini response
-    let geminiData: any;
-    try {
-      geminiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      geminiData = JSON.parse(geminiResponse);
-    } catch (parseError) {
-      throw new Error(`Failed to parse Gemini response: ${parseError}`);
-    }
 
-    // Convert risk flags (arrays from both sources) to object format
-    const geminiFlagsArray = Array.isArray(geminiData.risk?.flags) 
-      ? geminiData.risk.flags 
+    let cleaned = geminiResponse
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '');
+
+    const geminiData = JSON.parse(cleaned);
+
+    const geminiFlags = Array.isArray(geminiData.risk?.flags)
+      ? geminiData.risk.flags
       : [];
-    const heuristicFlagsArray = heuristicRisk.flags;
-    const allFlags = [...new Set([...geminiFlagsArray, ...heuristicFlagsArray])];
-    
+
+    const allFlags = [...new Set([...geminiFlags, ...heuristicRisk.flags])];
+
     const riskFlagsObj = {
       urgency: allFlags.includes('urgency'),
       commitment: allFlags.includes('commitment'),
       sensitive: allFlags.includes('sensitive'),
-      financial: allFlags.includes('financial')
+      financial: allFlags.includes('financial'),
     };
-    
+
     const mergedNotes = [
       ...(geminiData.risk?.notes || []),
-      ...heuristicRisk.notes
+      ...heuristicRisk.notes,
     ];
 
-    // Convert confidence from 0-1 to 0-100 scale
-    const geminiConfidence = (geminiData.risk?.confidence || 0) * 100;
-    const heuristicConfidence = heuristicRisk.confidence * 100;
-    const mergedConfidence = Math.max(geminiConfidence, heuristicConfidence);
+    const mergedConfidence = Math.max(
+      (geminiData.risk?.confidence || 0) * 100,
+      heuristicRisk.confidence * 100
+    );
 
-    // Transform reply_drafts to match frontend format
-    const replyDrafts = geminiData.reply_drafts || {};
+    const drafts = geminiData.reply_drafts || {};
+
     const transformedDrafts = [
-      {
-        style: 'short' as const,
-        subject: replyDrafts.short?.subject || 'Re: Email',
-        body: replyDrafts.short?.body || ''
-      },
-      {
-        style: 'friendly' as const,
-        subject: replyDrafts.friendly?.subject || 'Re: Email',
-        body: replyDrafts.friendly?.body || ''
-      },
-      {
-        style: 'formal' as const,
-        subject: replyDrafts.formal?.subject || 'Re: Email',
-        body: replyDrafts.formal?.body || ''
-      }
+      { style: 'short', subject: drafts.short?.subject || 'Re: Email', body: drafts.short?.body || '' },
+      { style: 'friendly', subject: drafts.friendly?.subject || 'Re: Email', body: drafts.friendly?.body || '' },
+      { style: 'formal', subject: drafts.formal?.subject || 'Re: Email', body: drafts.formal?.body || '' },
     ];
 
-    // Build response
     const response: GenerateResponse = {
       intent_summary: geminiData.intent_summary || [],
       reply_drafts: transformedDrafts,
@@ -144,80 +144,83 @@ app.post('/api/generate', async (req: Request, res: Response) => {
       risk: {
         flags: riskFlagsObj,
         notes: mergedNotes,
-        confidence: Math.min(Math.max(mergedConfidence, 0), 100) // Clamp 0-100
-      }
+        confidence: Math.min(Math.max(mergedConfidence, 0), 100),
+      },
     };
 
-    // Validate response
     GenerateResponseSchema.parse(response);
 
     res.json(response);
   } catch (error: any) {
     console.error('Generate error:', error);
-    
-    if (error.name === 'ZodError') {
-      res.status(400).json({
-        error: 'Validation error',
-        details: error.errors
-      });
-    } else {
-      res.status(500).json({
-        error: 'Failed to generate response',
-        message: error.message
-      });
-    }
+
+    res.status(500).json({
+      error: 'Failed to generate response',
+      message: error.message,
+    });
   }
 });
 
-// POST /api/rewrite
+//////////////////////////////////////////////////
+// Rewrite endpoint
+//////////////////////////////////////////////////
+
 app.post('/api/rewrite', async (req: Request, res: Response) => {
   try {
-    // Validate request
     const validatedData = RewriteRequestSchema.parse(req.body);
-    const { action, selectedDraftBody, originalEmail, context } = validatedData as RewriteRequest;
+    const { action, selectedDraftBody, originalEmail, context } =
+      validatedData as RewriteRequest;
 
-    // Call Gemini
-    const prompt = rewritePrompt(action, selectedDraftBody, originalEmail, context);
+    const prompt = rewritePrompt(
+      action,
+      selectedDraftBody,
+      originalEmail,
+      context
+    );
+
     const geminiResponse = await callGemini(prompt);
-    
-    // Parse Gemini response
-    let geminiData: any;
-    try {
-      geminiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      geminiData = JSON.parse(geminiResponse);
-    } catch (parseError) {
-      throw new Error(`Failed to parse Gemini response: ${parseError}`);
-    }
 
-    // Build response
+    const cleaned = geminiResponse
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '');
+
+    const geminiData = JSON.parse(cleaned);
+
     const response: RewriteResponse = {
       subject: geminiData.subject,
-      body: geminiData.body || selectedDraftBody
+      body: geminiData.body || selectedDraftBody,
     };
 
-    // Validate response
     RewriteResponseSchema.parse(response);
 
     res.json(response);
   } catch (error: any) {
     console.error('Rewrite error:', error);
-    
-    if (error.name === 'ZodError') {
-      res.status(400).json({
-        error: 'Validation error',
-        details: error.errors
-      });
-    } else {
-      res.status(500).json({
-        error: 'Failed to rewrite',
-        message: error.message
-      });
-    }
+
+    res.status(500).json({
+      error: 'Failed to rewrite',
+      message: error.message,
+    });
   }
 });
 
+//////////////////////////////////////////////////
+// Error handler
+//////////////////////////////////////////////////
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled error:', err);
+
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message,
+  });
+});
+
+//////////////////////////////////////////////////
 // Start server
+//////////////////////////////////////////////////
+
 app.listen(PORT, () => {
-  console.log(`🚀 ReplyWise API server running on http://localhost:${PORT}`);
-  console.log(`📡 CORS enabled for http://localhost:4200`);
+  console.log(`🚀 ReplyWise API running on port ${PORT}`);
 });
