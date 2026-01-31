@@ -12,8 +12,7 @@
   ],
   "host_permissions": [
     "https://mail.google.com/*",
-    "http://localhost:8080/*",
-    "http://localhost/*"
+    "https://replywise-1-yokb.onrender.com/*"
   ],
   "action": {
     "default_popup": "extension-popup.html",
@@ -30,7 +29,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src http://localhost:8080 http://localhost:* https://*.googleapis.com 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src https://replywise-1-yokb.onrender.com https://*.googleapis.com 'self'"
   },
   "web_accessible_resources": [
     {
