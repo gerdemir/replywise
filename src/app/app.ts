@@ -16,6 +16,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ReplywiseApiService } from './services/replywise-api.service';
 import { GenerateResponse, ReplyDraft } from './models/replywise.models';
 import { fadeIn, slideIn } from './app.animations';
+import { ActivatedRoute } from '@angular/router';
+
 
 @Component({
   selector: 'app-root',
@@ -58,7 +60,12 @@ export class App {
     return response.reply_drafts[this.selectedDraftIndex()];
   });
 
-  constructor(public apiService: ReplywiseApiService, private snackBar: MatSnackBar) {}
+  constructor(
+  public apiService: ReplywiseApiService,
+  private snackBar: MatSnackBar,
+  private route: ActivatedRoute   // ADD THIS
+) {}
+
 
   get demoMode(): boolean {
     return this.apiService.demoMode();
@@ -121,6 +128,14 @@ export class App {
   onTabChange(index: number): void {
     this.selectedDraftIndex.set(index);
   }
+  ngOnInit(): void {
+  this.route.queryParams.subscribe(params => {
+    if (params['email']) {
+      const decoded = decodeURIComponent(params['email']);
+      this.emailText.set(decoded); // auto-fill textarea
+      console.log('Email loaded from Gmail:', decoded.slice(0, 50));
+    }
+  })}
 
   onRewriteRequest(event: { action: 'shorter' | 'more_formal' | 'regenerate'; draftIndex: number }): void {
     const response = this.generateResponse();
