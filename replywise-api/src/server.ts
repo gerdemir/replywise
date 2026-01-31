@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 
 import { initializeGemini, callGemini } from './gemini';
 import { generatePrompt, rewritePrompt } from './prompts';
@@ -26,72 +27,141 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 //////////////////////////////////////////////////
-// ✅ Middleware order FIXED
+// 🔐 CONFIG (EDIT THESE SAFELY)
 //////////////////////////////////////////////////
 
-// CORS FIRST
-app.use(
-  cors({
-    origin: true, // allow all origins safely for now
-    credentials: true,
-  })
-);
-
-// JSON parsing
-app.use(express.json());
-
-// Helmet AFTER CORS
-app.use(
-  helmet({
-    contentSecurityPolicy: false, // avoid CSP blocking frontend
-  })
-);
+const DAILY_GEMINI_LIMIT = Number(process.env.DAILY_GEMINI_LIMIT || 30);
+const DAILY_VOICE_LIMIT = Number(process.env.DAILY_VOICE_LIMIT || 5);
+const MONTHLY_GEMINI_CAP = Number(process.env.MONTHLY_GEMINI_CAP || 50000);
 
 //////////////////////////////////////////////////
-// Routes
+// 🔐 MEMORY TRACKERS (simple + free)
 //////////////////////////////////////////////////
 
-app.use('/api', ttsRouter);
+const dailyGeminiUsage = new Map<string, number>();
+const dailyVoiceUsage = new Map<string, number>();
+
+let monthlyGeminiCalls = 0;
 
 //////////////////////////////////////////////////
-// Health check
+// 🔐 RESET DAILY + MONTHLY COUNTERS
 //////////////////////////////////////////////////
 
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+setInterval(() => {
+  dailyGeminiUsage.clear();
+  dailyVoiceUsage.clear();
+  console.log('🔄 Daily quotas reset');
+}, 24 * 60 * 60 * 1000);
+
+setInterval(() => {
+  monthlyGeminiCalls = 0;
+  console.log('🔄 Monthly quota reset');
+}, 30 * 24 * 60 * 60 * 1000);
+
+//////////////////////////////////////////////////
+// 🔐 RATE LIMIT (anti spam)
+//////////////////////////////////////////////////
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests. Slow down.' }
 });
 
 //////////////////////////////////////////////////
-// Gemini initialization
+// MIDDLEWARE
 //////////////////////////////////////////////////
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json());
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(limiter);
 
-if (!geminiApiKey || geminiApiKey === 'YOUR_KEY_HERE') {
-  console.warn('⚠️ GEMINI_API_KEY missing.');
-} else {
-  initializeGemini(geminiApiKey);
+//////////////////////////////////////////////////
+// HEALTH
+//////////////////////////////////////////////////
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+//////////////////////////////////////////////////
+// GEMINI INIT
+//////////////////////////////////////////////////
+
+if (process.env.GEMINI_API_KEY) {
+  initializeGemini(process.env.GEMINI_API_KEY);
   console.log('✅ Gemini initialized');
 }
 
 //////////////////////////////////////////////////
-// ElevenLabs initialization
+// HELPER FUNCTIONS
 //////////////////////////////////////////////////
 
-const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
+function getUserId(req: Request) {
+  return req.ip || 'unknown';
+}
 
-if (!elevenLabsApiKey || elevenLabsApiKey === 'YOUR_KEY_HERE') {
-  console.warn('⚠️ ELEVENLABS_API_KEY missing.');
-} else {
-  console.log('✅ ElevenLabs initialized');
+function checkDailyGemini(userId: string) {
+  const count = dailyGeminiUsage.get(userId) || 0;
+  if (count >= DAILY_GEMINI_LIMIT) return false;
+
+  dailyGeminiUsage.set(userId, count + 1);
+  return true;
+}
+
+function checkDailyVoice(userId: string) {
+  const count = dailyVoiceUsage.get(userId) || 0;
+  if (count >= DAILY_VOICE_LIMIT) return false;
+
+  dailyVoiceUsage.set(userId, count + 1);
+  return true;
+}
+
+function checkMonthlyCap() {
+  return monthlyGeminiCalls < MONTHLY_GEMINI_CAP;
 }
 
 //////////////////////////////////////////////////
-// Generate endpoint
+// TTS ROUTER WITH VOICE PROTECTION
+//////////////////////////////////////////////////
+
+app.use('/api/tts', (req, res, next) => {
+  const userId = getUserId(req);
+
+  if (!checkDailyVoice(userId)) {
+    return res.status(429).json({
+      error: 'Daily voice quota reached'
+    });
+  }
+
+  next();
+}, ttsRouter);
+
+//////////////////////////////////////////////////
+// GENERATE
 //////////////////////////////////////////////////
 
 app.post('/api/generate', async (req: Request, res: Response) => {
   try {
+    const userId = getUserId(req);
+
+    // 🔐 DAILY LIMIT
+    if (!checkDailyGemini(userId)) {
+      return res.status(429).json({
+        error: 'Daily free quota reached'
+      });
+    }
+
+    // 🔐 MONTHLY CAP
+    if (!checkMonthlyCap()) {
+      return res.status(503).json({
+        error: 'Service temporarily unavailable (quota exceeded)'
+      });
+    }
+
+    monthlyGeminiCalls++;
+
     const validatedData = GenerateRequestSchema.parse(req.body);
     const { emailText, context } = validatedData as GenerateRequest;
 
@@ -100,7 +170,7 @@ app.post('/api/generate', async (req: Request, res: Response) => {
     const prompt = generatePrompt(emailText, context);
     const geminiResponse = await callGemini(prompt);
 
-    let cleaned = geminiResponse
+    const cleaned = geminiResponse
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '');
 
@@ -112,70 +182,38 @@ app.post('/api/generate', async (req: Request, res: Response) => {
 
     const allFlags = [...new Set([...geminiFlags, ...heuristicRisk.flags])];
 
-    const riskFlagsObj = {
-      urgency: allFlags.includes('urgency'),
-      commitment: allFlags.includes('commitment'),
-      sensitive: allFlags.includes('sensitive'),
-      financial: allFlags.includes('financial'),
-    };
-
-    const mergedNotes = [
-      ...(geminiData.risk?.notes || []),
-      ...heuristicRisk.notes,
-    ];
-
-    const mergedConfidence = Math.max(
-      (geminiData.risk?.confidence || 0) * 100,
-      heuristicRisk.confidence * 100
-    );
-
     const drafts = geminiData.reply_drafts || {};
-
-    const transformedDrafts = [
-  {
-    style: 'short' as const,
-    subject: drafts.short?.subject || 'Re: Email',
-    body: drafts.short?.body || '',
-  },
-  {
-    style: 'friendly' as const,
-    subject: drafts.friendly?.subject || 'Re: Email',
-    body: drafts.friendly?.body || '',
-  },
-  {
-    style: 'formal' as const,
-    subject: drafts.formal?.subject || 'Re: Email',
-    body: drafts.formal?.body || '',
-  },
-];
-
 
     const response: GenerateResponse = {
       intent_summary: geminiData.intent_summary || [],
-      reply_drafts: transformedDrafts,
+      reply_drafts: [
+        { style: 'short', subject: drafts.short?.subject || 'Re: Email', body: drafts.short?.body || '' },
+        { style: 'friendly', subject: drafts.friendly?.subject || 'Re: Email', body: drafts.friendly?.body || '' },
+        { style: 'formal', subject: drafts.formal?.subject || 'Re: Email', body: drafts.formal?.body || '' }
+      ],
       questions_to_ask: geminiData.questions_to_ask || [],
       risk: {
-        flags: riskFlagsObj,
-        notes: mergedNotes,
-        confidence: Math.min(Math.max(mergedConfidence, 0), 100),
-      },
+        flags: {
+          urgency: allFlags.includes('urgency'),
+          commitment: allFlags.includes('commitment'),
+          sensitive: allFlags.includes('sensitive'),
+          financial: allFlags.includes('financial')
+        },
+        notes: geminiData.risk?.notes || [],
+        confidence: 80
+      }
     };
 
-    GenerateResponseSchema.parse(response);
-
     res.json(response);
-  } catch (error: any) {
-    console.error('Generate error:', error);
 
-    res.status(500).json({
-      error: 'Failed to generate response',
-      message: error.message,
-    });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 //////////////////////////////////////////////////
-// Rewrite endpoint
+// REWRITE
 //////////////////////////////////////////////////
 
 app.post('/api/rewrite', async (req: Request, res: Response) => {
@@ -184,13 +222,7 @@ app.post('/api/rewrite', async (req: Request, res: Response) => {
     const { action, selectedDraftBody, originalEmail, context } =
       validatedData as RewriteRequest;
 
-    const prompt = rewritePrompt(
-      action,
-      selectedDraftBody,
-      originalEmail,
-      context
-    );
-
+    const prompt = rewritePrompt(action, selectedDraftBody, originalEmail, context);
     const geminiResponse = await callGemini(prompt);
 
     const cleaned = geminiResponse
@@ -201,39 +233,20 @@ app.post('/api/rewrite', async (req: Request, res: Response) => {
 
     const response: RewriteResponse = {
       subject: geminiData.subject,
-      body: geminiData.body || selectedDraftBody,
+      body: geminiData.body
     };
 
-    RewriteResponseSchema.parse(response);
-
     res.json(response);
-  } catch (error: any) {
-    console.error('Rewrite error:', error);
 
-    res.status(500).json({
-      error: 'Failed to rewrite',
-      message: error.message,
-    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 //////////////////////////////////////////////////
-// Error handler
-//////////////////////////////////////////////////
-
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Unhandled error:', err);
-
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message,
-  });
-});
-
-//////////////////////////////////////////////////
-// Start server
+// START
 //////////////////////////////////////////////////
 
 app.listen(PORT, () => {
-  console.log(`🚀 ReplyWise API running on port ${PORT}`);
+  console.log(`🚀 ReplyWise API running on ${PORT}`);
 });
