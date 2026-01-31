@@ -1,20 +1,26 @@
-// ReplyWise Gmail Content Script
+// ============================================
+// ReplyWise Gmail Integration (PRO VERSION)
+// Opens full web app instead of popup
+// ============================================
 
-console.log("ReplyWise content script loaded");
+console.log("ReplyWise Gmail integration loaded");
 
-/////////////////////////////////////////////
-// Inject ReplyWise button into compose UI
-/////////////////////////////////////////////
+////////////////////////////////////////////////////
+// Inject ReplyWise button into Gmail compose UI
+////////////////////////////////////////////////////
 
 function injectReplyWiseButton() {
-  const observer = new MutationObserver(() => {
-    // Gmail compose window
-    const composeToolbars = document.querySelectorAll('[role="toolbar"]');
 
-    composeToolbars.forEach(toolbar => {
+  const observer = new MutationObserver(() => {
+
+    const toolbars = document.querySelectorAll('[role="toolbar"]');
+
+    toolbars.forEach(toolbar => {
+
       if (toolbar.querySelector('#replywise-compose-btn')) return;
 
       const btn = document.createElement('button');
+
       btn.id = 'replywise-compose-btn';
       btn.textContent = '✨ ReplyWise';
 
@@ -30,10 +36,11 @@ function injectReplyWiseButton() {
         font-size:12px;
       `;
 
-      btn.addEventListener('click', extractEmailAndOpenReplyWise);
+      btn.addEventListener('click', openReplyWiseWebApp);
 
       toolbar.appendChild(btn);
     });
+
   });
 
   observer.observe(document.body, {
@@ -42,20 +49,19 @@ function injectReplyWiseButton() {
   });
 }
 
-/////////////////////////////////////////////
-// Extract email content safely
-/////////////////////////////////////////////
+////////////////////////////////////////////////////
+// Extract email and open web app
+////////////////////////////////////////////////////
 
-function extractEmailAndOpenReplyWise() {
-  // Gmail message bodies usually have this class
+function openReplyWiseWebApp() {
+
   const messageBodies = document.querySelectorAll('.a3s');
 
   if (!messageBodies.length) {
-    alert('ReplyWise: Email content not found.');
+    alert('ReplyWise: Email not found');
     return;
   }
 
-  // Usually last message is the active one
   const lastMessage = messageBodies[messageBodies.length - 1];
 
   const emailText =
@@ -64,32 +70,22 @@ function extractEmailAndOpenReplyWise() {
     '';
 
   if (!emailText.trim()) {
-    alert('ReplyWise: Email content empty.');
+    alert('ReplyWise: Email empty');
     return;
   }
 
-  chrome.storage.local.set({ selectedEmail: emailText }, () => {
-    chrome.action.openPopup();
-  });
+  // Encode email safely for URL
+  const encoded = encodeURIComponent(emailText);
+
+  // Open your deployed Angular web app
+  const url =
+    `https://replywise-topaz.vercel.app?email=${encoded}`;
+
+  window.open(url, '_blank');
 }
 
-/////////////////////////////////////////////
-// Messaging API
-/////////////////////////////////////////////
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GET_EMAIL_CONTENT') {
-    const messageBodies = document.querySelectorAll('.a3s');
-    const lastMessage = messageBodies[messageBodies.length - 1];
-
-    sendResponse({
-      emailText: lastMessage?.innerText || '',
-    });
-  }
-});
-
-/////////////////////////////////////////////
+////////////////////////////////////////////////////
 // Init
-/////////////////////////////////////////////
+////////////////////////////////////////////////////
 
 injectReplyWiseButton();
