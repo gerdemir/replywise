@@ -38,7 +38,7 @@ async function callElevenLabs(text: string) {
             Accept: 'audio/mpeg',
           },
           responseType: 'arraybuffer',
-          timeout: 15000, // 15s timeout protection
+          timeout: 60000, // 60s timeout protection
         }
       );
 
@@ -83,7 +83,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.send(audioBuffer);
   } catch (err: any) {
-    console.error('🔥 TTS failed:', err.message);
+    console.error('🔥 TTS FULL ERROR:', err.response?.data || err.message);
 
     const status = err.response?.status;
 
