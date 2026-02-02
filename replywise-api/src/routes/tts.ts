@@ -1,76 +1,107 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import axios from 'axios';
-import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
-// Rate limiting for TTS requests
-const ttsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many TTS requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const ELEVEN_API_KEY = process.env.ELEVENLABS_API_KEY!;
+const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'Rachel'; // default
 
-// Apply rate limiting to TTS endpoint
-router.use('/tts', ttsLimiter);
+//////////////////////////////////////////////////
+// Helper: sleep for retry
+//////////////////////////////////////////////////
 
-router.post('/tts', async (req, res) => {
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+//////////////////////////////////////////////////
+// ElevenLabs call with retry + timeout
+//////////////////////////////////////////////////
+
+async function callElevenLabs(text: string) {
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`🔊 ElevenLabs attempt ${attempt}`);
+
+      const response = await axios.post(
+        url,
+        {
+          text,
+          model_id: 'eleven_multilingual_v2',
+        },
+        {
+          headers: {
+            'xi-api-key': ELEVEN_API_KEY,
+            'Content-Type': 'application/json',
+            Accept: 'audio/mpeg',
+          },
+          responseType: 'arraybuffer',
+          timeout: 15000, // 15s timeout protection
+        }
+      );
+
+      return response.data;
+    } catch (err: any) {
+      console.error('❌ ElevenLabs error:', err.response?.status, err.message);
+
+      // if last attempt → throw
+      if (attempt === 3) throw err;
+
+      await sleep(1500); // retry delay
+    }
+  }
+}
+
+//////////////////////////////////////////////////
+// ROUTE
+//////////////////////////////////////////////////
+
+router.post('/', async (req: Request, res: Response) => {
   try {
-    const { text, voice_id = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM' } = req.body;
-
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
+    if (!ELEVEN_API_KEY) {
+      return res.status(500).json({
+        error: 'ELEVENLABS_API_KEY missing on server',
+      });
     }
 
-    if (!process.env.ELEVENLABS_API_KEY) {
-      return res.status(500).json({ error: 'ElevenLabs API key not configured' });
+    const { text } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        error: 'Text required',
+      });
     }
 
-    // ElevenLabs TTS API call
-    const response = await axios.post(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
-      {
-        text,
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-        },
-      },
-      {
-        headers: {
-          'Accept': 'audio/mpeg',
-          'Content-Type': 'application/json',
-          'xi-api-key': process.env.ELEVENLABS_API_KEY,
-        },
-        responseType: 'arraybuffer',
-        timeout: 30000, // 30 second timeout
-      }
-    );
+    const audioBuffer = await callElevenLabs(text);
 
-    // Set appropriate headers for audio response
     res.set({
       'Content-Type': 'audio/mpeg',
-      'Content-Length': response.data.length,
-      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      'Content-Length': audioBuffer.length,
     });
 
-    res.send(response.data);
-  } catch (error: any) {
-    console.error('TTS Error:', error.response?.data || error.message);
+    res.send(audioBuffer);
+  } catch (err: any) {
+    console.error('🔥 TTS failed:', err.message);
 
-    if (error.response?.status === 401) {
-      return res.status(401).json({ error: 'Invalid ElevenLabs API key' });
+    const status = err.response?.status;
+
+    if (status === 401) {
+      return res.status(401).json({
+        error: 'Invalid ElevenLabs API key',
+      });
     }
 
-    if (error.response?.status === 429) {
-      return res.status(429).json({ error: 'ElevenLabs API rate limit exceeded' });
+    if (status === 429) {
+      return res.status(429).json({
+        error: 'ElevenLabs quota exceeded',
+      });
     }
 
     res.status(500).json({
-      error: 'Failed to generate speech',
-      details: error.message
+      error: 'Audio generation failed',
+      message: err.message,
     });
   }
 });
